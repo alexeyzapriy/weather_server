@@ -2,7 +2,7 @@ var express = require('express');
 var app = express();
 var request = require("request");
 var redis = require("redis");
-var db = redis.createClient();
+var db = redis.createClient(process.env.REDIS_URL);
 var URL = 'http://api.openweathermap.org/data/2.5/weather?appid=90a38f7f24109dde84c746b33254ed0e&q=';
 
 app.set('port', (process.env.PORT || 5000));
