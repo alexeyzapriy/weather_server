@@ -3,6 +3,7 @@ var app = express();
 var request = require("request");
 var redis = require("redis");
 var db = redis.createClient(process.env.REDIS_URL);
+var cacheAge = 4*60*60;
 var URL = 'http://api.openweathermap.org/data/2.5/weather?appid=90a38f7f24109dde84c746b33254ed0e&units=metric&q=';
 
 app.set('port', (process.env.PORT || 5000));
@@ -19,22 +20,24 @@ app.get('/', function(req, resp) {
 
 app.get('/current', function(req, resp) {
   if (req.query.city){
-    db.get(req.query.city, function (err, data) {
-      if (data){
+    var city = req.query.city.toLowerCase();
+    db.get(city, function (err, data) {
+      if (data) {
+        console.log("From cache: " + city);
         resp.end(data);
       } else {
-        console.log("Request: " + URL + req.query.city);
-        request(URL + req.query.city, function(error, r, body) {
+        console.log("Request: " + URL + city);
+        request(URL + city, function(error, r, body) {
           console.log("Response: " + body);
-          if (error) { 
+          if (error) {
             console.log(err);
             resp.json(err);
             return;
           }
-          db.set(req.query.city, body, redis.print);
-          db.expire(req.query.city, 4*60*60);
-          resp.end(body);
-        }); 
+          db.set(city, body, redis.print);
+          db.expire(city, cacheAge);
+          resp.end(body)
+        });
       }
     });
   } else {
@@ -46,5 +49,3 @@ app.get('/current', function(req, resp) {
 app.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
 });
-
-
